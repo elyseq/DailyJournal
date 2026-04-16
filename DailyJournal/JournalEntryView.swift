@@ -32,6 +32,7 @@ struct JournalEntryView: View {
     @State private var photoDataItems: [Data] = []
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var isLoadingPhotos = false
+    @State private var photoIndexToRemove: Int?
 
     // Customize photo appearance here
     var photoStyle = PhotoLayoutStyle()
@@ -46,7 +47,7 @@ struct JournalEntryView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     // Date header
                     Text(dateTitle)
-                        .font(.title2.weight(.semibold))
+                        .font(.system(size: 18, weight: .medium, design: .serif))
                         .foregroundStyle(.secondary)
                         .padding(.horizontal)
 
@@ -90,6 +91,24 @@ struct JournalEntryView: View {
             .onAppear { loadExistingEntry() }
             .onChange(of: selectedPhotos) { _, newItems in
                 Task { await loadPhotos(from: newItems) }
+            }
+            .alert("Remove Photo", isPresented: Binding(
+                get: { photoIndexToRemove != nil },
+                set: { if !$0 { photoIndexToRemove = nil } }
+            )) {
+                Button("Remove", role: .destructive) {
+                    if let index = photoIndexToRemove, index < photoDataItems.count {
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            let _ = photoDataItems.remove(at: index)
+                        }
+                    }
+                    photoIndexToRemove = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    photoIndexToRemove = nil
+                }
+            } message: {
+                Text("Are you sure you want to remove this photo?")
             }
         }
     }
@@ -150,9 +169,7 @@ struct JournalEntryView: View {
                     .shadow(color: photoStyle.shadowColor, radius: photoStyle.shadowRadius, y: 2)
                     .overlay(alignment: .topTrailing) {
                         Button {
-                            withAnimation(.easeOut(duration: 0.25)) {
-                                let _ = photoDataItems.remove(at: index)
-                            }
+                            photoIndexToRemove = index
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.title3)
