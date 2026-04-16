@@ -9,10 +9,14 @@ import Foundation
 import SwiftData
 
 @Model
-final class Item {
-    var timestamp: Date
-    
-    init(timestamp: Date) {
-        self.timestamp = timestamp
+final class JournalEntry {
+    var date: Date
+    var text: String
+    var photoData: [Data]
+
+    init(date: Date, text: String = "", photoData: [Data] = []) {
+        self.date = date
+        self.text = text
+        self.photoData = photoData
     }
 }
