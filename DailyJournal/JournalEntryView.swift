@@ -230,6 +230,7 @@ struct JournalEntryView: View {
             let newEntry = JournalEntry(date: date, text: text, photoData: photoDataItems)
             modelContext.insert(newEntry)
         }
+        try? modelContext.save()
         dismiss()
     }
 }

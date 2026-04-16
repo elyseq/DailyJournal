@@ -39,7 +39,7 @@ struct CalendarView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var entries: [JournalEntry]
     @State private var selectedDay: SelectedDay?
-    @State private var scrollTarget: String?
+    @State private var hasScrolledToToday = false
 
     // Customize this to change appearance
     var style = CalendarStyle()
@@ -58,22 +58,24 @@ struct CalendarView: View {
         NavigationStack {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(spacing: 24, pinnedViews: .sectionHeaders) {
+                    VStack(spacing: 24) {
                         ForEach(months, id: \.self) { month in
-                            Section {
+                            VStack(spacing: 0) {
+                                monthHeader(for: month)
                                 monthGrid(for: month)
                                     .padding(.horizontal)
-                            } header: {
-                                monthHeader(for: month)
                             }
                         }
                     }
                     .padding(.vertical)
                 }
                 .onAppear {
-                    // Scroll to current month on launch
-                    let today = calendar.startOfMonth(for: Date())
-                    proxy.scrollTo(today, anchor: .top)
+                    guard !hasScrolledToToday else { return }
+                    hasScrolledToToday = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        let today = calendar.startOfMonth(for: Date())
+                        proxy.scrollTo(today, anchor: .top)
+                    }
                 }
             }
             .background(style.backgroundColor)
