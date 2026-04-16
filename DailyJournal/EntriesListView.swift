@@ -10,7 +10,7 @@ import SwiftData
 
 struct EntriesListView: View {
     @Query(sort: \JournalEntry.date, order: .reverse) private var entries: [JournalEntry]
-    @State private var selectedDay: SelectedDay?
+    @State private var selectedEntry: JournalEntry?
 
     var body: some View {
         NavigationStack {
@@ -33,18 +33,15 @@ struct EntriesListView: View {
                 }
             }
             .navigationTitle("All Entries")
-            .sheet(item: $selectedDay) { day in
-                JournalEntryView(
-                    date: day.date,
-                    entry: entries.first { Calendar.current.isDate($0.date, inSameDayAs: day.date) }
-                )
+            .sheet(item: $selectedEntry) { entry in
+                JournalReadView(entry: entry)
             }
         }
     }
 
     private func entryCard(for entry: JournalEntry) -> some View {
         Button {
-            selectedDay = SelectedDay(date: entry.date)
+            selectedEntry = entry
         } label: {
             VStack(alignment: .leading, spacing: 12) {
                 // Date header
