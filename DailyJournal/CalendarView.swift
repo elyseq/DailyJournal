@@ -100,6 +100,7 @@ struct CalendarView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal)
             .padding(.vertical, 8)
+            .padding(.bottom, 4)
             .background(.regularMaterial)
     }
 

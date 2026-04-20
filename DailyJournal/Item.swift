@@ -20,3 +20,31 @@ final class JournalEntry {
         self.photoData = photoData
     }
 }
+
+// TODO: Re-enable when CloudKit is configured
+//
+// @Model
+// final class UserProfile {
+//     @Attribute(.unique) var username: String
+//     var friendCode: String
+//     var createdAt: Date
+//
+//     init(username: String) {
+//         self.username = username
+//         self.friendCode = UUID().uuidString.prefix(8).lowercased() + String(Int.random(in: 100...999))
+//         self.createdAt = Date()
+//     }
+// }
+//
+// @Model
+// final class Friend {
+//     @Attribute(.unique) var username: String
+//     var friendCode: String
+//     var addedAt: Date
+//
+//     init(username: String, friendCode: String) {
+//         self.username = username
+//         self.friendCode = friendCode
+//         self.addedAt = Date()
+//     }
+// }

@@ -28,28 +28,42 @@ struct JournalEntryView: View {
     let date: Date
     var entry: JournalEntry?
 
+    @State private var entryDate: Date = Date()
     @State private var text: String = ""
     @State private var photoDataItems: [Data] = []
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var isLoadingPhotos = false
     @State private var photoIndexToRemove: Int?
+    @State private var showingDatePicker = false
 
     // Customize photo appearance here
     var photoStyle = PhotoLayoutStyle()
 
     private var dateTitle: String {
-        date.formatted(.dateTime.weekday(.wide).month(.wide).day().year())
+        entryDate.formatted(.dateTime.weekday(.wide).month(.wide).day().year())
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    // Date header
-                    Text(dateTitle)
-                        .font(.system(size: 18, weight: .medium, design: .serif))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal)
+                    // Date header with change-date button
+                    HStack {
+                        Text(dateTitle)
+                            .font(.system(size: 18, weight: .medium, design: .serif))
+                            .foregroundStyle(.secondary)
+
+                        Spacer()
+
+                        Button {
+                            showingDatePicker = true
+                        } label: {
+                            Image(systemName: "calendar.badge.clock")
+                                .font(.body)
+                                .foregroundStyle(.purple)
+                        }
+                    }
+                    .padding(.horizontal)
 
                     // Text editor
                     textEditor
@@ -88,7 +102,10 @@ struct JournalEntryView: View {
                 }
                 #endif
             }
-            .onAppear { loadExistingEntry() }
+            .onAppear {
+                entryDate = date
+                loadExistingEntry()
+            }
             .onChange(of: selectedPhotos) { _, newItems in
                 Task { await loadPhotos(from: newItems) }
             }
@@ -109,6 +126,29 @@ struct JournalEntryView: View {
                 }
             } message: {
                 Text("Are you sure you want to remove this photo?")
+            }
+            .sheet(isPresented: $showingDatePicker) {
+                NavigationStack {
+                    DatePicker(
+                        "Move entry to",
+                        selection: $entryDate,
+                        displayedComponents: .date
+                    )
+                    .datePickerStyle(.graphical)
+                    .padding()
+                    .navigationTitle("Change Date")
+                    #if os(iOS)
+                    .navigationBarTitleDisplayMode(.inline)
+                    #endif
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                showingDatePicker = false
+                            }
+                        }
+                    }
+                }
+                .presentationDetents([.medium])
             }
         }
     }
@@ -139,45 +179,68 @@ struct JournalEntryView: View {
     private var photoSection: some View {
         Group {
             if !photoDataItems.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 16) {
                     Text("Photos")
                         .font(.headline)
                         .padding(.horizontal)
 
-                    // Staggered/masonry-ish layout for aesthetic presentation
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: photoStyle.photoSpacing) {
-                            ForEach(photoDataItems.indices, id: \.self) { index in
-                                photoCard(data: photoDataItems[index], index: index)
+                    let pairs = Array(photoDataItems.indices).chunked(into: 2)
+                    VStack(spacing: 16) {
+                        ForEach(pairs.indices, id: \.self) { rowIndex in
+                            HStack(spacing: 12) {
+                                ForEach(pairs[rowIndex], id: \.self) { index in
+                                    polaroidCard(data: photoDataItems[index], index: index)
+                                }
+                                if pairs[rowIndex].count == 1 {
+                                    Spacer().frame(maxWidth: .infinity)
+                                }
                             }
                         }
-                        .padding(.horizontal)
                     }
+                    .padding(.horizontal)
                 }
             }
         }
     }
 
-    private func photoCard(data: Data, index: Int) -> some View {
+    private func polaroidCard(data: Data, index: Int) -> some View {
         Group {
             if let image = platformImage(from: data) {
-                image
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: photoStyle.photoHeight * 0.8, height: photoStyle.photoHeight)
-                    .clipShape(RoundedRectangle(cornerRadius: photoStyle.cornerRadius))
-                    .shadow(color: photoStyle.shadowColor, radius: photoStyle.shadowRadius, y: 2)
-                    .overlay(alignment: .topTrailing) {
+                VStack(spacing: 0) {
+                    GeometryReader { geo in
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .clipped()
+                    }
+                    .frame(height: 180)
+                    .padding(8)
+
+                    // Polaroid bottom strip
+                    HStack {
+                        Text(dateTitle)
+                            .font(.system(size: 10, weight: .regular, design: .serif))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+
+                        Spacer()
+
                         Button {
                             photoIndexToRemove = index
                         } label: {
                             Image(systemName: "xmark.circle.fill")
-                                .font(.title3)
+                                .font(.caption)
                                 .symbolRenderingMode(.palette)
-                                .foregroundStyle(.white, .black.opacity(0.5))
-                                .padding(8)
+                                .foregroundStyle(.gray, .gray.opacity(0.2))
                         }
                     }
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 10)
+                }
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
             }
         }
     }
@@ -241,10 +304,11 @@ struct JournalEntryView: View {
 
     private func saveEntry() {
         if let entry {
+            entry.date = entryDate
             entry.text = text
             entry.photoData = photoDataItems
         } else {
-            let newEntry = JournalEntry(date: date, text: text, photoData: photoDataItems)
+            let newEntry = JournalEntry(date: entryDate, text: text, photoData: photoDataItems)
             modelContext.insert(newEntry)
         }
         try? modelContext.save()
