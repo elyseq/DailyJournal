@@ -35,6 +35,7 @@ struct JournalEntryView: View {
     @State private var isLoadingPhotos = false
     @State private var photoIndexToRemove: Int?
     @State private var showingDatePicker = false
+    @State private var expandedPhotoData: Data?
 
     // Customize photo appearance here
     var photoStyle = PhotoLayoutStyle()
@@ -151,6 +152,7 @@ struct JournalEntryView: View {
                 .presentationDetents([.medium])
             }
         }
+        .photoZoomOverlay(photoData: $expandedPhotoData, platformImage: platformImage)
     }
 
     // MARK: - Text Editor
@@ -216,6 +218,10 @@ struct JournalEntryView: View {
                     }
                     .frame(height: 180)
                     .padding(8)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        expandedPhotoData = data
+                    }
 
                     // Polaroid bottom strip
                     HStack {

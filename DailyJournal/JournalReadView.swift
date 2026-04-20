@@ -13,6 +13,7 @@ struct JournalReadView: View {
 
     let entry: JournalEntry
     @State private var isEditing = false
+    @State private var expandedPhotoData: Data?
 
     var photoStyle = PhotoLayoutStyle()
 
@@ -74,6 +75,7 @@ struct JournalReadView: View {
                 )
             }
         }
+        .photoZoomOverlay(photoData: $expandedPhotoData, platformImage: platformImage)
     }
 
     // MARK: - Photo Gallery
@@ -114,6 +116,10 @@ struct JournalReadView: View {
                     }
                     .frame(height: 180)
                     .padding(8)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        expandedPhotoData = data
+                    }
 
                     // Polaroid bottom strip
                     HStack {
