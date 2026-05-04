@@ -13,16 +13,33 @@ struct DailyJournalApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             JournalEntry.self,
-            // TODO: Re-enable when CloudKit is configured
-            // UserProfile.self,
-            // Friend.self,
+            UserProfile.self,
+            Friend.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try ModelContainer(
+                for: schema,
+                configurations: [modelConfiguration]
+            )
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            // Migration failed — back up old database and start fresh
+            print("Migration failed: \(error). Backing up old store and creating new one.")
+            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            let storeURL = appSupport.appendingPathComponent("default.store")
+            for ext in ["", "-shm", "-wal"] {
+                let fileURL = storeURL.appendingPathExtension(ext.isEmpty ? "" : String(ext.dropFirst()))
+                let backupURL = fileURL.appendingPathExtension("backup")
+                let url = ext.isEmpty ? storeURL : URL(fileURLWithPath: storeURL.path + ext)
+                let backup = URL(fileURLWithPath: url.path + ".backup")
+                try? FileManager.default.moveItem(at: url, to: backup)
+            }
+            do {
+                return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            } catch {
+                fatalError("Could not create ModelContainer after reset: \(error)")
+            }
         }
     }()
 

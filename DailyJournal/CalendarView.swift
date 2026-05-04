@@ -46,6 +46,11 @@ struct CalendarView: View {
 
     private var calendar: Calendar { Calendar.current }
 
+    // Pre-computed set of days that have entries (avoids scanning all entries per cell)
+    private var entryDateKeys: Set<DateComponents> {
+        Set(entries.map { calendar.dateComponents([.year, .month, .day], from: $0.date) })
+    }
+
     private var months: [Date] {
         let today = Date()
         let totalMonths = style.monthsBefore + 1 + style.monthsAfter
@@ -144,7 +149,8 @@ struct CalendarView: View {
     private func dayCellView(for day: DayItem, in month: Date) -> some View {
         let isToday = calendar.isDateInToday(day.date)
         let isCurrentMonth = calendar.isDate(day.date, equalTo: month, toGranularity: .month)
-        let hasEntry = entryFor(date: day.date) != nil
+        let dayKey = calendar.dateComponents([.year, .month, .day], from: day.date)
+        let hasEntry = entryDateKeys.contains(dayKey)
 
         return Button {
             selectedDay = SelectedDay(date: day.date)

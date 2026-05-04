@@ -60,10 +60,12 @@ struct EntriesListView: View {
 
                 // Photo thumbnails
                 if !entry.photoData.isEmpty {
+                    let thumbs = entry.thumbnailData
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(entry.photoData.indices, id: \.self) { index in
-                                thumbnailImage(from: entry.photoData[index])
+                                let data = index < thumbs.count ? thumbs[index] : entry.photoData[index]
+                                thumbnailImage(from: data)
                             }
                         }
                     }
@@ -83,11 +85,19 @@ struct EntriesListView: View {
     private func thumbnailImage(from data: Data) -> some View {
         Group {
             if let image = platformImage(from: data) {
-                image
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 60, height: 60)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                VStack(spacing: 0) {
+                    image
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 56, height: 56)
+                        .clipped()
+                        .padding(4)
+
+                    Spacer().frame(height: 8)
+                }
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 3))
+                .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
             }
         }
     }

@@ -31,6 +31,7 @@ struct JournalEntryView: View {
     @State private var entryDate: Date = Date()
     @State private var text: String = ""
     @State private var photoDataItems: [Data] = []
+    @State private var thumbnailItems: [Data] = []
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var isLoadingPhotos = false
     @State private var photoIndexToRemove: Int?
@@ -117,7 +118,10 @@ struct JournalEntryView: View {
                 Button("Remove", role: .destructive) {
                     if let index = photoIndexToRemove, index < photoDataItems.count {
                         withAnimation(.easeOut(duration: 0.25)) {
-                            let _ = photoDataItems.remove(at: index)
+                            photoDataItems.remove(at: index)
+                            if index < thumbnailItems.count {
+                                thumbnailItems.remove(at: index)
+                            }
                         }
                     }
                     photoIndexToRemove = nil
@@ -207,7 +211,8 @@ struct JournalEntryView: View {
 
     private func polaroidCard(data: Data, index: Int) -> some View {
         Group {
-            if let image = platformImage(from: data) {
+            let displayData = index < thumbnailItems.count ? thumbnailItems[index] : data
+            if let image = platformImage(from: displayData) {
                 VStack(spacing: 0) {
                     GeometryReader { geo in
                         image
@@ -220,7 +225,7 @@ struct JournalEntryView: View {
                     .padding(8)
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        expandedPhotoData = data
+                        expandedPhotoData = photoDataItems[index]
                     }
 
                     // Polaroid bottom strip
@@ -294,6 +299,7 @@ struct JournalEntryView: View {
         if let entry {
             text = entry.text
             photoDataItems = entry.photoData
+            thumbnailItems = entry.thumbnailData
         }
     }
 
@@ -302,6 +308,8 @@ struct JournalEntryView: View {
         for item in items {
             if let data = try? await item.loadTransferable(type: Data.self) {
                 photoDataItems.append(data)
+                let thumb = JournalEntry.generateThumbnail(from: data) ?? data
+                thumbnailItems.append(thumb)
             }
         }
         selectedPhotos.removeAll()
@@ -309,12 +317,23 @@ struct JournalEntryView: View {
     }
 
     private func saveEntry() {
+        // Ensure thumbnails array matches photos
+        var thumbs = thumbnailItems
+        while thumbs.count < photoDataItems.count {
+            let full = photoDataItems[thumbs.count]
+            thumbs.append(JournalEntry.generateThumbnail(from: full) ?? full)
+        }
+        if thumbs.count > photoDataItems.count {
+            thumbs = Array(thumbs.prefix(photoDataItems.count))
+        }
+
         if let entry {
             entry.date = entryDate
             entry.text = text
             entry.photoData = photoDataItems
+            entry.thumbnailData = thumbs
         } else {
-            let newEntry = JournalEntry(date: entryDate, text: text, photoData: photoDataItems)
+            let newEntry = JournalEntry(date: entryDate, text: text, photoData: photoDataItems, thumbnailData: thumbs)
             modelContext.insert(newEntry)
         }
         try? modelContext.save()

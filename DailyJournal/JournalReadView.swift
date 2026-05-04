@@ -91,7 +91,8 @@ struct JournalReadView: View {
                 ForEach(pairs.indices, id: \.self) { rowIndex in
                     HStack(spacing: 12) {
                         ForEach(pairs[rowIndex], id: \.self) { index in
-                            readOnlyPolaroid(data: entry.photoData[index])
+                            let thumbData = index < entry.thumbnailData.count ? entry.thumbnailData[index] : entry.photoData[index]
+                            readOnlyPolaroid(displayData: thumbData, fullData: entry.photoData[index])
                         }
                         if pairs[rowIndex].count == 1 {
                             Spacer().frame(maxWidth: .infinity)
@@ -103,9 +104,9 @@ struct JournalReadView: View {
         }
     }
 
-    private func readOnlyPolaroid(data: Data) -> some View {
+    private func readOnlyPolaroid(displayData: Data, fullData: Data) -> some View {
         Group {
-            if let image = platformImage(from: data) {
+            if let image = platformImage(from: displayData) {
                 VStack(spacing: 0) {
                     GeometryReader { geo in
                         image
@@ -118,7 +119,7 @@ struct JournalReadView: View {
                     .padding(8)
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        expandedPhotoData = data
+                        expandedPhotoData = fullData
                     }
 
                     // Polaroid bottom strip
